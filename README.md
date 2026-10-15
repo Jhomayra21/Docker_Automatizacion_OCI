@@ -2,7 +2,7 @@
 
 Práctica de integración y despliegue continuo con **React, Docker, GitHub Actions, Docker Hub y una máquina virtual de Oracle Cloud Infrastructure (OCI)**.
 
-Cada `push` enviado a la rama `main` inicia automáticamente el workflow de GitHub Actions:
+Cada `push` enviado a la rama `main` inicia automáticamente el workflow de GitHub Actions para validar y publicar la imagen en Docker Hub. El despliegue a OCI queda como una opción manual para cuando se necesite:
 
 ```text
 Código en GitHub
@@ -12,7 +12,7 @@ GitHub Actions
       ├── npm ci + npm run build
       ├── docker build
       ├── docker push a Docker Hub
-      └── conexión SSH a OCI
+      └── OCI opcional (ejecución manual)
                     │
                     ▼
               docker pull + run
@@ -79,9 +79,9 @@ Contiene tres trabajos dependientes:
 2. **Construir y publicar en Docker Hub:** crea la imagen y publica dos etiquetas:
    - `latest`
    - El SHA completo del commit, por ejemplo `a91c2f8...`
-3. **Desplegar automáticamente en OCI:** se conecta por SSH, descarga exactamente la imagen correspondiente al commit y reemplaza el contenedor.
+3. **Desplegar en OCI (opcional):** solamente se ejecuta manualmente cuando se marca `deploy_oci`; se conecta por SSH, descarga exactamente la imagen correspondiente al commit y reemplaza el contenedor.
 
-También puede ejecutarse manualmente desde **Actions > CI/CD Docker Hub y OCI > Run workflow**.
+También puede ejecutarse manualmente desde **Actions > CI/CD Docker Hub y OCI > Run workflow**. La opción `deploy_oci` está desactivada de forma predeterminada.
 
 ## Repositorio requerido en Docker Hub
 
@@ -114,12 +114,17 @@ En el repositorio abrir:
 Settings > Secrets and variables > Actions > New repository secret
 ```
 
-Crear exactamente estos cinco secretos:
+Para compilar y publicar en Docker Hub solamente se necesitan estos dos secretos:
 
 | Secreto | Contenido |
 |---|---|
 | `DOCKER_USERNAME` | Usuario de Docker Hub, por ejemplo `jhomp` |
 | `DOCKER_TOKEN` | Token personal de Docker Hub con lectura/escritura |
+
+Los siguientes tres secretos son opcionales por ahora y solo se necesitan cuando se active el despliegue manual a OCI:
+
+| Secreto | Contenido |
+|---|---|
 | `OCI_HOST` | IP pública actual de la VM, por ejemplo `155.181.158.252` |
 | `OCI_USERNAME` | Usuario SSH; para Ubuntu normalmente `ubuntu` |
 | `OCI_SSH_KEY` | Contenido completo de la clave SSH privada `.key` |
@@ -165,7 +170,7 @@ sudo systemctl status docker
 
 ## Primer despliegue
 
-Después de configurar todos los secretos:
+Después de configurar `DOCKER_USERNAME` y `DOCKER_TOKEN`:
 
 ```powershell
 git add .
@@ -173,15 +178,21 @@ git commit -m "feat: automatizar despliegue con GitHub Actions y OCI"
 git push origin main
 ```
 
-En GitHub, abrir la pestaña **Actions**. Se deben observar en verde los trabajos:
+En GitHub, abrir la pestaña **Actions**. Para un `push` normal se deben observar:
 
 ```text
 Validar aplicación React
 Construir y publicar en Docker Hub
-Desplegar automáticamente en OCI
+Desplegar automáticamente en OCI (Skipped)
 ```
 
-Al finalizar, abrir:
+La imagen aparecerá en Docker Hub como:
+
+```text
+jhomp/docker-automatizacion-oci:latest
+```
+
+Para desplegar posteriormente en OCI, agregar los tres secretos `OCI_*`, iniciar la VM y ejecutar manualmente el workflow marcando `deploy_oci`. Al finalizar, abrir:
 
 ```text
 http://IP_PUBLICA
